@@ -1,17 +1,12 @@
-/**
- * notification_app_be/src/controllers/notificationController.js
- *
- * HTTP request/response layer — thin adapter between Express routes
- * and the notification service.  All business logic lives in the service.
- */
+// HTTP request/response layer — thin adapter between Express routes
+
 
 "use strict";
 
 const svc = require("../services/notificationService.js");
 const { Log } = require("../../../logging_middleware/index.js");
 
-// ─── GET /api/notifications ───────────────────────────────────────────────────
-
+// GET /api/notifications
 async function getAllNotifications(req, res) {
   try {
     await Log("backend", "debug", "controller",
@@ -20,7 +15,6 @@ async function getAllNotifications(req, res) {
     const { isRead } = req.query;
     let notifications = await svc.getAllNotifications();
 
-    // Optional filter: ?isRead=true|false
     if (isRead !== undefined) {
       const flag = isRead === "true";
       notifications = notifications.filter((n) => n.isRead === flag);

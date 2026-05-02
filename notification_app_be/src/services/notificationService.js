@@ -1,22 +1,3 @@
-/**
- * notification_app_be/src/services/notificationService.js
- *
- * Service layer — all business logic for the notification platform.
- *
- * Responsibilities:
- *   1. Authenticate with the test server and fetch raw notifications
- *   2. In-memory read-state tracking (isRead per notification ID)
- *   3. Priority Inbox — Stage 6
- *      Uses a Min-Heap of size N to compute the top-N notifications
- *      by a composite score:
- *        score = typeWeight × 10^12 + timestampMilliseconds
- *      where Placement=3, Result=2, Event=1.
- *      Multiplying by 10^12 ensures type always dominates recency.
- *
- *   Min-Heap guarantees O(log N) per insertion and O(n log N) total,
- *   making it suitable for streaming — new notifications can be evaluated
- *   against the heap root in O(log N) without reprocessing the full set.
- */
 
 "use strict";
 
@@ -27,15 +8,11 @@ const { Log } = require("../../../logging_middleware/index.js");
 
 const TEST_SERVER_BASE = "http://20.207.122.201/evaluation-service";
 
-// ─── Type weights (Placement > Result > Event) ───────────────────────────────
 const TYPE_WEIGHT = { Placement: 3, Result: 2, Event: 1 };
 
-// ─── In-memory read state: Map<notificationID, boolean> ─────────────────────
-// In production this would live in the database; here it survives the
-// lifetime of the Node process.
+
 const _readState = new Map();
 
-// ─── Token cache ──────────────────────────────────────────────────────────────
 let _cachedToken = null;
 
 async function _getAuthToken() {
@@ -72,7 +49,7 @@ async function _getToken() {
   return _cachedToken;
 }
 
-// ─── Raw fetch from test server ───────────────────────────────────────────────
+//Raw fetch from test server
 
 async function _fetchFromServer() {
   await Log("backend", "info", "service",
@@ -118,19 +95,16 @@ async function _fetchFromServer() {
   return data.notifications;
 }
 
-// ─── Public: get all notifications (with in-memory isRead state) ─────────────
 
 async function getAllNotifications() {
   const raw = await _fetchFromServer();
 
-  // Attach isRead flag — default false for new IDs
   return raw.map((n) => ({
     ...n,
     isRead: _readState.get(n.ID) ?? false,
   }));
 }
 
-// ─── Public: get single notification by ID ────────────────────────────────────
 
 async function getNotificationById(id) {
   await Log("backend", "debug", "service",
@@ -146,7 +120,6 @@ async function getNotificationById(id) {
   return found ?? null;
 }
 
-// ─── Public: mark one notification as read ────────────────────────────────────
 
 async function markAsRead(id) {
   await Log("backend", "debug", "service",
@@ -155,7 +128,6 @@ async function markAsRead(id) {
   return true;
 }
 
-// ─── Public: mark all notifications as read ───────────────────────────────────
 
 async function markAllAsRead() {
   await Log("backend", "info", "service",
@@ -175,9 +147,6 @@ async function markAllAsRead() {
   return count;
 }
 
-// ─── Min-Heap (no external libraries) ────────────────────────────────────────
-// Stores { score, notification } objects; root is always the smallest score.
-// Used to maintain top-N in O(log N) per insertion.
 
 class MinHeap {
   constructor() { this._data = []; }
@@ -230,16 +199,13 @@ class MinHeap {
   }
 }
 
-// ─── Priority score formula ───────────────────────────────────────────────────
 
 function computeScore(notification) {
   const weight      = TYPE_WEIGHT[notification.Type] ?? 0;
   const timestampMs = new Date(notification.Timestamp).getTime();
-  // Large multiplier so type always outranks any timestamp difference
   return weight * 1e12 + timestampMs;
 }
 
-// ─── Public: top-N priority notifications (Stage 6) ──────────────────────────
 
 async function getTopNNotifications(n = 10) {
   await Log("backend", "debug", "service",
@@ -250,9 +216,6 @@ async function getTopNNotifications(n = 10) {
   const heap = new MinHeap();
 
   for (const notification of notifications) {
-    // Skip notifications the student has already read
-    // (In a real system "unread" would be the persistent DB field;
-    //  here we use the in-memory _readState.)
     if (notification.isRead) continue;
 
     const score = computeScore(notification);

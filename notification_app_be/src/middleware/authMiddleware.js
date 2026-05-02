@@ -1,23 +1,17 @@
 /**
- * notification_app_be/src/middleware/authMiddleware.js
- *
  * Simple Bearer-token authentication middleware for the notification API.
  *
  * Clients must send:
  *   Authorization: Bearer <token>
  *
  * The token is validated by checking it exists and is non-empty.
- * In a production system this would verify a JWT signature or call an
- * auth-service; for this evaluation the check ensures the header is present.
  */
 
 "use strict";
 
 const { Log } = require("../../../logging_middleware/index.js");
 
-/**
- * Express middleware — rejects requests without a valid Authorization header.
- */
+// Express middleware — rejects requests without a valid Authorization header.
 async function authMiddleware(req, res, next) {
   const authHeader = req.headers["authorization"] || "";
 
