@@ -1,0 +1,13 @@
+{
+  "name": "logging-middleware",
+  "version": "1.0.0",
+  "description": "Reusable logging package that ships structured log entries to the evaluation test-server",
+  "main": "index.js",
+  "scripts": {
+    "test": "node -e \"const {Log}=require('.');Log('backend','info','utils','Logging middleware smoke-test OK').then(()=>console.log('Done'))\""
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "license": "MIT"
+}

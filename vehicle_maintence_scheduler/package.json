@@ -1,0 +1,13 @@
+{
+  "name": "vehicle-maintence-scheduler",
+  "version": "1.0.0",
+  "description": "Microservice that schedules vehicle maintenance tasks to maximise operational impact within mechanic-hour budget using 0/1 Knapsack DP",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "license": "MIT"
+}
