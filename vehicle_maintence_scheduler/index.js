@@ -1,6 +1,4 @@
 /**
- * vehicle_maintence_scheduler/index.js
- *
  * Vehicle Maintenance Scheduler — entry point.
  *
  * Problem statement (from spec):
@@ -10,10 +8,7 @@
  *   This is the classic 0/1 Knapsack problem.
  *
  * Algorithm: Space-optimised 1-D DP (bottom-up), O(n × W) time, O(W) space.
- * No external algorithm libraries are used.
  *
- * Usage:
- *   node index.js
  */
 
 "use strict";
@@ -25,6 +20,11 @@ const { Log } = require("../logging_middleware/index.js");
 const { solveKnapsack } = require("./scheduler.js");
 
 const TEST_SERVER_BASE = "http://20.207.122.201/evaluation-service";
+
+// Helper: truncate a string to at most 48 chars for safe logging
+function truncate(str, max = 48) {
+  return str.length <= max ? str : str.substring(0, max - 1) + "…";
+}
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
@@ -38,8 +38,9 @@ async function getAuthToken() {
     clientSecret: process.env.AUTH_CLIENT_SECRET,
   };
 
+  // FIX
   await Log("backend", "debug", "auth",
-    `Requesting auth token for ${payload.email}`);
+    truncate(`Auth token request: ${payload.email}`));
 
   const res = await fetch(`${TEST_SERVER_BASE}/auth`, {
     method:  "POST",
@@ -53,47 +54,54 @@ async function getAuthToken() {
   }
 
   const data = await res.json();
-  await Log("backend", "info", "auth", "Bearer token obtained successfully");
+  // FIX: "Bearer token obtained successfully" (34 chars) — kept consistent
+  await Log("backend", "info", "auth", "Bearer token obtained");
   return data.access_token;
 }
 
 // ─── Data fetching ───────────────────────────────────────────────────────────
 
 async function fetchDepots(token) {
-  await Log("backend", "info", "service", "Fetching depot list from test server");
+  // FIX: "Fetching depot list from test server" (36 chars) — trimmed anyway
+  await Log("backend", "info", "service", "Fetching depot list from server");
 
   const res = await fetch(`${TEST_SERVER_BASE}/depots`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
   if (!res.ok) {
+    // FIX: `Depot API error: status ${res.status}` (37 chars) — ok
     await Log("backend", "error", "service",
-      `Depot API error: status ${res.status}`);
+      `Depot API error: ${res.status}`);
     throw new Error(`Depot API error: ${res.status}`);
   }
 
   const data = await res.json();
+  // FIX: "Fetched ${data.depots.length} depots from test server" (53 chars) — TOO LONG
   await Log("backend", "info", "service",
-    `Fetched ${data.depots.length} depots from test server`);
+    `Fetched ${data.depots.length} depots`);
   return data.depots; // [{ ID, MechanicHours }]
 }
 
 async function fetchVehicles(token) {
-  await Log("backend", "info", "service", "Fetching vehicle task list from test server");
+  // FIX: trimmed
+  await Log("backend", "info", "service", "Fetching vehicle task list");
 
   const res = await fetch(`${TEST_SERVER_BASE}/vehicles`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
   if (!res.ok) {
+    // FIX: trimmed
     await Log("backend", "error", "service",
-      `Vehicles API error: status ${res.status}`);
+      `Vehicles API error: ${res.status}`);
     throw new Error(`Vehicles API error: ${res.status}`);
   }
 
   const data = await res.json();
+  // FIX: "Fetched ${data.vehicles.length} vehicle tasks from test server" (62 chars) — TOO LONG
   await Log("backend", "info", "service",
-    `Fetched ${data.vehicles.length} vehicle tasks from test server`);
+    `Fetched ${data.vehicles.length} vehicles`);
   return data.vehicles; // [{ TaskID, Duration, Impact }]
 }
 
@@ -117,16 +125,17 @@ function printResult(result) {
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
-  await Log("backend", "info", "controller",
-    "Vehicle Maintenance Scheduler starting up");
+  // FIX: "Vehicle Maintenance Scheduler starting up" (41 chars) — OK but trimmed
+  await Log("backend", "info", "controller", "Scheduler starting up");
 
   // 1. Authenticate
   let token;
   try {
     token = await getAuthToken();
   } catch (err) {
+    // FIX: was `Authentication failed — cannot proceed: ${err.message}` (54+ chars) — TOO LONG
     await Log("backend", "fatal", "auth",
-      `Authentication failed — cannot proceed: ${err.message}`);
+      truncate(`Auth failed: ${err.message}`));
     console.error("FATAL:", err.message);
     process.exit(1);
   }
@@ -139,14 +148,15 @@ async function main() {
       fetchVehicles(token),
     ]);
   } catch (err) {
+    // FIX
     await Log("backend", "fatal", "service",
-      `Data fetch failed: ${err.message}`);
+      truncate(`Data fetch failed: ${err.message}`));
     console.error("FATAL:", err.message);
     process.exit(1);
   }
 
   await Log("backend", "info", "domain",
-    `Scheduler running: ${depots.length} depots × ${vehicles.length} tasks`);
+    `Scheduler: ${depots.length} depots, ${vehicles.length} tasks`);
 
   // 3. Run 0/1 Knapsack for each depot
   const results = [];
@@ -154,7 +164,7 @@ async function main() {
     const { ID, MechanicHours } = depot;
 
     await Log("backend", "debug", "domain",
-      `Processing Depot ${ID} — budget ${MechanicHours}h, tasks ${vehicles.length}`);
+      `Depot ${ID}: budget ${MechanicHours}h, tasks ${vehicles.length}`);
 
     const { selectedTasks, totalImpact } = solveKnapsack(vehicles, MechanicHours);
     const hoursUsed = selectedTasks.reduce((s, t) => s + t.Duration, 0);
@@ -167,9 +177,9 @@ async function main() {
       tasks:       selectedTasks,
     });
 
+    // FIX: was multi-part template that exceeded 48 chars — split key info, truncate
     await Log("backend", "info", "domain",
-      `Depot ${ID}: scheduled ${selectedTasks.length} tasks, ` +
-      `impact=${totalImpact}, hours=${hoursUsed}/${MechanicHours}`);
+      `Depot ${ID}: ${selectedTasks.length} tasks, impact=${totalImpact}`);
   }
 
   // 4. Print summary
@@ -179,13 +189,14 @@ async function main() {
   }
 
   console.log("\n");
-  await Log("backend", "info", "controller",
-    "Vehicle Maintenance Scheduler completed successfully");
+  // FIX: was "Vehicle Maintenance Scheduler completed successfully" (52 chars) — TOO LONG
+  await Log("backend", "info", "controller", "Scheduler completed");
 }
 
 main().catch(async (err) => {
+  // FIX: was `Unhandled top-level error: ${err.message}` — err.message can be long
   await Log("backend", "fatal", "controller",
-    `Unhandled top-level error: ${err.message}`);
+    truncate(`Unhandled error: ${err.message}`));
   console.error("Unhandled error:", err);
   process.exit(1);
 });

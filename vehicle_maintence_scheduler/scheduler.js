@@ -1,7 +1,5 @@
 /**
- * vehicle_maintence_scheduler/scheduler.js
- *
- * Pure 0/1 Knapsack implementation — no external libraries.
+ * 0/1 Knapsack implementation
  *
  * Approach: Space-optimised 1-D dynamic-programming.
  *
@@ -12,10 +10,8 @@
  *     dp[w] = max(dp[w], dp[w - Duration] + Impact)
  *
  * Time  : O(n × W)  where n = number of tasks, W = mechanic-hour budget
- * Space : O(W)      — only one 1-D array, not a 2-D table
+ * Space : O(W)      — only one 1-D array
  *
- * Backtracking to recover selected tasks runs in O(n × W) worst-case but
- * typically much faster because we short-circuit once the budget is exhausted.
  *
  * @module scheduler
  */
