@@ -1,6 +1,4 @@
 /**
- * logging_middleware/index.js
- *
  * Reusable logging package that ships log entries to the Affordmed
  * evaluation test-server.  Drop this module into any Node.js project
  * and call Log(stack, level, pkg, message) anywhere you need observability.
@@ -18,8 +16,7 @@
 "use strict";
 
 const path = require("path");
-// Always resolve .env from the repository root, regardless of which
-// sub-folder requires this module.
+
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
 const TEST_SERVER_BASE = "http://20.207.122.201/evaluation-service";
