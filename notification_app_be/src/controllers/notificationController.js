@@ -1,6 +1,5 @@
 // HTTP request/response layer — thin adapter between Express routes
 
-
 "use strict";
 
 const svc = require("../services/notificationService.js");
@@ -19,7 +18,8 @@ async function getAllNotifications(req, res) {
       const flag = isRead === "true";
       notifications = notifications.filter((n) => n.isRead === flag);
       await Log("backend", "debug", "controller",
-        `Filtered by isRead=${flag}: ${notifications.length} results`);
+        // FIX: "Filtered by isRead=true: 99 results" is 36 chars — fine
+        `Filtered isRead=${flag}: ${notifications.length} results`);
     }
 
     res.status(200).json({
@@ -27,21 +27,22 @@ async function getAllNotifications(req, res) {
       notifications,
     });
   } catch (err) {
+    // FIX: was `getAllNotifications failed: ${err.message}` — can exceed 48
     await Log("backend", "error", "controller",
-      `getAllNotifications failed: ${err.message}`);
+      `getAllNotifications failed`.substring(0, 48));
     res.status(500).json({ error: err.message });
   }
 }
 
-// ─── GET /api/notifications/priority?n=10 ────────────────────────────────────
-
+// GET /api/notifications/priority?n=10
 async function getPriorityNotifications(req, res) {
   try {
     const n = parseInt(req.query.n, 10) || 10;
 
     if (n < 1 || n > 100) {
+      // FIX: was `Invalid n=${n} for priority inbox — must be 1–100` (48 chars exactly but with em-dash may be longer in bytes) — trim to be safe
       await Log("backend", "warn", "controller",
-        `Invalid n=${n} for priority inbox — must be 1–100`);
+        `Invalid n=${n}: must be 1-100`);
       return res.status(400).json({
         error: "Validation error",
         message: "Query param 'n' must be between 1 and 100",
@@ -49,7 +50,7 @@ async function getPriorityNotifications(req, res) {
     }
 
     await Log("backend", "debug", "controller",
-      `getPriorityNotifications invoked with n=${n}`);
+      `getPriorityNotifications n=${n}`);
 
     const top = await svc.getTopNNotifications(n);
 
@@ -59,18 +60,18 @@ async function getPriorityNotifications(req, res) {
     });
   } catch (err) {
     await Log("backend", "error", "controller",
-      `getPriorityNotifications failed: ${err.message}`);
+      `getPriorityNotifications failed`);
     res.status(500).json({ error: err.message });
   }
 }
 
-// ─── GET /api/notifications/:id ───────────────────────────────────────────────
-
+// GET /api/notifications/:id
 async function getNotificationById(req, res) {
   try {
     const { id } = req.params;
+    // FIX: was `getNotificationById invoked for ID: ${id}` (50+ chars) — TOO LONG
     await Log("backend", "debug", "controller",
-      `getNotificationById invoked for ID: ${id}`);
+      `getById: ${id}`.substring(0, 48));
 
     const notification = await svc.getNotificationById(id);
 
@@ -84,20 +85,19 @@ async function getNotificationById(req, res) {
     res.status(200).json({ notification });
   } catch (err) {
     await Log("backend", "error", "controller",
-      `getNotificationById failed: ${err.message}`);
+      `getNotificationById failed`);
     res.status(500).json({ error: err.message });
   }
 }
 
-// ─── PATCH /api/notifications/:id/read ───────────────────────────────────────
-
+// PATCH /api/notifications/:id/read
 async function markAsRead(req, res) {
   try {
     const { id } = req.params;
+    // FIX: was `markAsRead invoked for notification ID: ${id}` (49+ chars) — TOO LONG
     await Log("backend", "info", "controller",
-      `markAsRead invoked for notification ID: ${id}`);
+      `markAsRead: ${id}`.substring(0, 48));
 
-    // Verify notification exists before marking
     const notification = await svc.getNotificationById(id);
     if (!notification) {
       return res.status(404).json({
@@ -110,13 +110,12 @@ async function markAsRead(req, res) {
     res.status(200).json({ message: "Notification marked as read", id });
   } catch (err) {
     await Log("backend", "error", "controller",
-      `markAsRead failed: ${err.message}`);
+      `markAsRead failed`);
     res.status(500).json({ error: err.message });
   }
 }
 
-// ─── PATCH /api/notifications/read-all ───────────────────────────────────────
-
+// PATCH /api/notifications/read-all
 async function markAllAsRead(req, res) {
   try {
     await Log("backend", "info", "controller",
@@ -129,7 +128,7 @@ async function markAllAsRead(req, res) {
     });
   } catch (err) {
     await Log("backend", "error", "controller",
-      `markAllAsRead failed: ${err.message}`);
+      `markAllAsRead failed`);
     res.status(500).json({ error: err.message });
   }
 }

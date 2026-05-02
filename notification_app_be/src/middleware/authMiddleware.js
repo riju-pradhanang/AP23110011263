@@ -16,8 +16,9 @@ async function authMiddleware(req, res, next) {
   const authHeader = req.headers["authorization"] || "";
 
   if (!authHeader.startsWith("Bearer ")) {
+    // FIX: was `Unauthenticated request to ${req.method} ${req.originalUrl} — missing Bearer token` (72+ chars) — TOO LONG
     await Log("backend", "warn", "auth",
-      `Unauthenticated request to ${req.method} ${req.originalUrl} — missing Bearer token`);
+      `No Bearer token: ${req.method} ${req.originalUrl}`.substring(0, 48));
     return res.status(401).json({
       error: "Unauthorized",
       message: "Authorization header with Bearer token is required",
@@ -26,15 +27,17 @@ async function authMiddleware(req, res, next) {
 
   const token = authHeader.slice(7).trim();
   if (!token) {
+    // FIX: was `Empty Bearer token on ${req.method} ${req.originalUrl}` — can exceed 48 with long URLs
     await Log("backend", "warn", "auth",
-      `Empty Bearer token on ${req.method} ${req.originalUrl}`);
+      `Empty token: ${req.method} ${req.originalUrl}`.substring(0, 48));
     return res.status(401).json({ error: "Unauthorized", message: "Token is empty" });
   }
 
   // Attach token to request so controllers/services can pass it downstream
   req.bearerToken = token;
+  // FIX: was `Bearer token present for ${req.method} ${req.originalUrl}` (47-60+ chars) — can exceed
   await Log("backend", "debug", "auth",
-    `Bearer token present for ${req.method} ${req.originalUrl}`);
+    `Auth OK: ${req.method} ${req.originalUrl}`.substring(0, 48));
   next();
 }
 

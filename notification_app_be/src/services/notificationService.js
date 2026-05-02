@@ -1,4 +1,3 @@
-
 "use strict";
 
 const path = require("path");
@@ -9,7 +8,6 @@ const { Log } = require("../../../logging_middleware/index.js");
 const TEST_SERVER_BASE = "http://20.207.122.201/evaluation-service";
 
 const TYPE_WEIGHT = { Placement: 3, Result: 2, Event: 1 };
-
 
 const _readState = new Map();
 
@@ -43,14 +41,13 @@ async function _getAuthToken() {
 async function _getToken() {
   if (!_cachedToken) {
     _cachedToken = await _getAuthToken();
-    await Log("backend", "debug", "auth",
-      "Notification service: Bearer token obtained and cached");
+    // FIX: was "Notification service: Bearer token obtained and cached" (54 chars) — TOO LONG
+    await Log("backend", "debug", "auth", "Service: token obtained and cached");
   }
   return _cachedToken;
 }
 
-//Raw fetch from test server
-
+// Raw fetch from test server
 async function _fetchFromServer() {
   await Log("backend", "info", "service",
     "Fetching notifications from test server");
@@ -59,8 +56,9 @@ async function _fetchFromServer() {
   try {
     token = await _getToken();
   } catch (err) {
+    // FIX: was `Failed to obtain auth token in notification service: ${err.message}` (57+ chars) — TOO LONG
     await Log("backend", "error", "auth",
-      `Failed to obtain auth token in notification service: ${err.message}`);
+      `Service auth token failed: ${err.message}`.substring(0, 48));
     throw err;
   }
 
@@ -70,8 +68,8 @@ async function _fetchFromServer() {
 
   // Refresh token once on 401
   if (res.status === 401) {
-    await Log("backend", "warn", "auth",
-      "Token expired fetching notifications — refreshing");
+    // FIX: was "Token expired fetching notifications — refreshing" (49 chars) — TOO LONG
+    await Log("backend", "warn", "auth", "Token expired — refreshing");
     _cachedToken = await _getAuthToken();
     const retry = await fetch(`${TEST_SERVER_BASE}/notifications`, {
       headers: { Authorization: `Bearer ${_cachedToken}` },
@@ -90,8 +88,9 @@ async function _fetchFromServer() {
   }
 
   const data = await res.json();
+  // "Fetched ${n} notifications from test server" is 43 chars at most — OK
   await Log("backend", "info", "service",
-    `Fetched ${data.notifications.length} notifications from test server`);
+    `Fetched ${data.notifications.length} notifications`);
   return data.notifications;
 }
 
@@ -108,14 +107,14 @@ async function getAllNotifications() {
 
 async function getNotificationById(id) {
   await Log("backend", "debug", "service",
-    `Looking up notification ID: ${id}`);
+    `Looking up notification ID: ${id}`.substring(0, 48));
 
   const all = await getAllNotifications();
   const found = all.find((n) => n.ID === id);
 
   if (!found) {
     await Log("backend", "warn", "service",
-      `Notification not found: ${id}`);
+      `Notification not found: ${id}`.substring(0, 48));
   }
   return found ?? null;
 }
@@ -123,15 +122,16 @@ async function getNotificationById(id) {
 
 async function markAsRead(id) {
   await Log("backend", "debug", "service",
-    `Marking notification ${id} as read`);
+    `Marking notification ${id} as read`.substring(0, 48));
   _readState.set(id, true);
   return true;
 }
 
 
 async function markAllAsRead() {
+  // "Marking all cached notifications as read" is 40 chars — OK
   await Log("backend", "info", "service",
-    "Marking all cached notifications as read");
+    "Marking all notifications as read");
 
   const all = await _fetchFromServer();
   let count = 0;
@@ -209,7 +209,7 @@ function computeScore(notification) {
 
 async function getTopNNotifications(n = 10) {
   await Log("backend", "debug", "service",
-    `Computing top ${n} priority notifications`);
+    `Computing top ${n} priority notifications`.substring(0, 48));
 
   const notifications = await getAllNotifications();
 
@@ -224,7 +224,6 @@ async function getTopNNotifications(n = 10) {
     if (heap.size < n) {
       heap.push(entry);
     } else if (heap.min && score > heap.min.score) {
-      // Current notification beats the weakest item in our top-N
       heap.pop();
       heap.push(entry);
     }
@@ -234,7 +233,7 @@ async function getTopNNotifications(n = 10) {
   const sorted = heap.drainAscending().reverse();
 
   await Log("backend", "info", "service",
-    `Top ${n} computed. Highest: Type=${sorted[0]?.notification.Type ?? "none"}`);
+    `Top ${n} computed. Best: ${sorted[0]?.notification.Type ?? "none"}`.substring(0, 48));
 
   return sorted.map((entry) => ({
     ...entry.notification,
